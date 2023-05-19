@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="en" >
+<head>
+  <meta charset="UTF-8">
+  <title>CodePen - 在庫管理システム完成</title>
+  
+
+</head>
+<body>
+<!-- partial:index.partial.html -->
+<!DOCTYPE html>
+<html>
+<head>
+  
+  <title>在庫管理システム</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    /* CSSスタイル */
+    body {
+      font-family: 'Helvetica Neue', Arial, sans-serif;
+      background-color: #f5f5f5;
+      margin: 0;
+      padding: 20px;
+    }
+
+    h1 {
+      text-align: center;
+      color: #555555;
+    }
+
+    h2 {
+      color: #555555;
+      margin-top: 30px;
+    }
+
+    form {
+      margin-bottom: 20px;
+    }
+
+    label {
+      display: block;
+      font-weight: bold;
+      margin-bottom: 5px;
+    }
+
+    input[type="text"],
+    input[type="number"],
+    select {
+      width: 100%;
+      padding: 8px;
+      border-radius: 4px;
+      border: 1px solid #dddddd;
+      box-sizing: border-box;
+    }
+
+    button {
+      padding: 10px 20px;
+      background-color: #ff4081;
+      color: #ffffff;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background-color: #ff1970;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 20px;
+    }
+
+    th, td {
+      padding: 10px;
+      text-align: left;
+      border-bottom: 1px solid #dddddd;
+    }
+
+    th {
+      background-color: #f2f2f2;
+    }
+
+    .low-quantity {
+      color: red;
+    }
+
+    .editBtn,
+    .deleteBtn {
+      padding: 6px 12px;
+      margin-right: 5px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 14px;
+      text-transform: uppercase;
+    }
+
+    .editBtn {
+      background-color: #4caf50;
+      color: #ffffff;
+    }
+
+    .editBtn:hover {
+      background-color: #45a049;
+    }
+
+    .deleteBtn {
+      background-color: #f44336;
+      color: #ffffff;
+    }
+
+    .deleteBtn:hover {
+      background-color: #d32f2f;
+    }
+
+    @media (max-width: 600px) {
+      /* スマートフォン用のスタイル */
+      body {
+        font-size: 14px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <h1>在庫管理システム</h1>
+
+  <h2>アイテムの登録</h2>
+  <form id="itemForm">
+    <label for="itemName">名称:</label>
+    <input type="text" id="itemName" required><br>
+
+    <label for="itemLocation">保存場所:</label>
+    <input type="text" id="itemLocation" required><br>
+
+    <label for="itemQuantity">指定残量:</label>
+    <input type="number" step="0.1" id="itemQuantity" required><br>
+
+    <button type="submit">登録</button>
+  </form>
+
+  <h2>在庫一覧</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>名称</th>
+        <th>保存場所</th>
+        <th>指定残量</th>
+        <th>現在の残量</th>
+        <th>アクション</th>
+      </tr>
+    </thead>
+    <tbody id="inventoryBody"></tbody>
+  </table>
+
+  <h2>残量を更新する</h2>
+  <form id="updateQuantityForm">
+    <label for="itemToUpdate">アイテム:</label>
+    <select id="itemToUpdate"></select><br>
+
+    <label for="updatedQuantity">更新後の残量:</label>
+    <input type="number" step="0.1" id="updatedQuantity" required><br>
+
+    <button type="submit">更新</button>
+  </form>
+
+  <h2>週に1度のチェック</h2>
+  <form id="weeklyCheckForm">
+    <label for="checkDate">日付:</label>
+    <input type="date" id="checkDate" required><br>
+
+    <label for="checkerName">チェック者の名前:</label>
+    <input type="text" id="checkerName" required><br>
+
+    <button type="submit">チェック実行</button>
+  </form>
+
+  <h2>チェック履歴</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>日付</th>
+        <th>チェック者</th>
+      </tr>
+    </thead>
+    <tbody id="checkHistoryBody"></tbody>
+  </table>
+
+  <script>
+    // JavaScriptコード
+    let inventoryData = [];
+    let checkHistoryData = [];
+
+    document.getElementById('itemForm').addEventListener('submit', function (e) {
+      e.preventDefault();
+
+      let itemName = document.getElementById('itemName').value;
+      let itemLocation = document.getElementById('itemLocation').value;
+      let itemQuantity = parseFloat(document.getElementById('itemQuantity').value);
+
+      let item = {
+        name: itemName,
+        location: itemLocation,
+        specifiedQuantity: itemQuantity,
+        currentQuantity: 0
+      };
+
+      inventoryData.push(item);
+      renderInventoryTable();
+      this.reset();
+    });
+
+    document.getElementById('updateQuantityForm').addEventListener('submit', function (e) {
+      e.preventDefault();
+
+      let selectedItemIndex = document.getElementById('itemToUpdate').selectedIndex;
+      let updatedQuantity = parseFloat(document.getElementById('updatedQuantity').value);
+
+      if (selectedItemIndex >= 0) {
+        let selectedItem = inventoryData[selectedItemIndex];
+        selectedItem.currentQuantity = updatedQuantity;
+        renderInventoryTable();
+
+        if (updatedQuantity < selectedItem.specifiedQuantity) {
+          alert('アラート: ' + selectedItem.name + ' の残量が指定残量より少なくなっています！');
+        }
+      }
+
+      this.reset();
+    });
+
+    document.getElementById('weeklyCheckForm').addEventListener('submit', function (e) {
+      e.preventDefault();
+
+      let checkDate = document.getElementById('checkDate').value;
+      let checkerName = document.getElementById('checkerName').value;
+
+      addCheckHistory(checkDate, checkerName);
+      this.reset();
+    });
+
+    function renderInventoryTable() {
+      let inventoryBody = document.getElementById('inventoryBody');
+      inventoryBody.innerHTML = '';
+
+      inventoryData.forEach(function (item, index) {
+        let row = document.createElement('tr');
+        if (item.currentQuantity < item.specifiedQuantity) {
+          row.classList.add('low-quantity');
+        }
+        row.innerHTML = `
+          <td>${item.name}</td>
+          <td>${item.location}</td>
+          <td>${item.specifiedQuantity}</td>
+          <td>${item.currentQuantity}</td>
+          <td>
+          <button class="editBtn" onclick="editItem(this)">編集</button>
+          <button class="deleteBtn" onclick="deleteItem(this)">消去</button>
+        </td>
+        `;
+        inventoryBody.appendChild(row);
+      });
+
+      populateItemOptions();
+    }
+
+    function populateItemOptions() {
+      let itemToUpdateSelect = document.getElementById('itemToUpdate');
+      itemToUpdateSelect.innerHTML = '';
+
+      inventoryData.forEach(function (item, index) {
+        let option = document.createElement('option');
+        option.value = index;
+        option.text = item.name;
+        itemToUpdateSelect.appendChild(option);
+      });
+    }
+
+    
+   function editItem(btn) {
+      var row = btn.parentNode.parentNode;
+      var name = row.cells[0].textContent;
+      var location = row.cells[1].textContent;
+      var quantity = parseFloat(row.cells[2].textContent);
+      var updatedName = prompt('新しい名称:', name);
+      var updatedLocation = prompt('新しい保存場所:', location);
+      var updatedQuantity = parseFloat(prompt('新しい指定残量:', quantity));
+      if (updatedName && updatedLocation && !isNaN(updatedQuantity)) {
+        row.cells[0].textContent = updatedName;
+        row.cells[1].textContent = updatedLocation;
+        row.cells[2].textContent = updatedQuantity;
+      }
+    }
+
+    function deleteItem(index) {
+      if (confirm('本当に削除しますか？')) {
+        inventoryData.splice(index, 1);
+        renderInventoryTable();
+      }
+    }
+
+    function addCheckHistory(date, checker) {
+      let checkHistoryBody = document.getElementById('checkHistoryBody');
+      let row = document.createElement('tr');
+      row.innerHTML = `
+        <td>${date}</td>
+        <td>${checker}</td>
+      `;
+      checkHistoryBody.appendChild(row);
+    }
+
+    // ページ読み込み時に在庫一覧を表示
+    renderInventoryTable();
+  </script>
+</body>
+</html>
+<!-- partial -->
+  
+</body>
+</html>
